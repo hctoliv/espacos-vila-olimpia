@@ -47,7 +47,7 @@
           <ul class="facts">${s.facts.map(f => `<li>${f}</li>`).join('')}</ul>
           <a class="addr" href="https://www.google.com/maps/search/${encodeURIComponent(s.end + ', ' + s.bairro + ', São Paulo')}" target="_blank" rel="noopener">${pin}${s.end}</a>
           <div class="ctas">
-            <a class="btn btn-sm" href="${waLink(s)}" target="_blank" rel="noopener">Pedir orçamento</a>
+            <a class="btn btn-sm" href="${waLink(s)}" target="_blank" rel="noopener">Orçamento</a>
             <button class="btn btn-sm btn-line" data-fotos="${i}">Ver fotos</button>
           </div>
         </div>
