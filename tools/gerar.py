@@ -10,6 +10,7 @@ de redirecionamento para hospedagens sem .htaccess (GitHub Pages).
 Uso: python3 tools/gerar.py   (rodar na pasta do site)
 """
 import html, json, os, pathlib, datetime
+from urllib.parse import quote_plus
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SITE = 'https://espacosvilaolimpia.com.br'
@@ -20,7 +21,8 @@ TEL_TXT = '(11) 98116-1923'
 WA_TXT = '(11) 95311-6530'
 EMAIL = 'eventos@espacosvilaolimpia.com.br'
 HOJE = datetime.date.today().isoformat()
-V = '4'  # versão dos assets (cache)
+V = '5'  # versão dos assets (cache)
+INDEXNOW_KEY = '357eaf7eeca013f0a6e54743cb55866e'  # arquivo <chave>.txt na raiz; ver tools/LANCAMENTO.md
 
 e = lambda s: html.escape(s, quote=True)
 
@@ -117,6 +119,126 @@ CLIENTES = [('amazon', 'Amazon'), ('santander', 'Santander'), ('bradesco', 'Brad
 INCLUI = ['Som', 'Iluminação', 'Imagem', 'Mobiliário', 'Open bar', 'Open food']
 
 ORG_ID = SITE + '/#organizacao'
+ATUALIZADO = 'novembro de 2026'
+ATENDIMENTO = 'de segunda a sexta, das 8h às 19h, e as visitas são apenas com agendamento'
+
+# Fatos para ficha rápida, FAQ, comparativo, schema e llms.txt (GEO).
+# Só o que o site original afirma: textos dos espaços + tags do WordPress
+# ("Espaços para casamentos" em 5 espaços, "Buffet" no Notizia) + CEP do Vitrinni no link do mapa.
+# Capacidade só onde o original informa; nos outros fica "sob consulta".
+FICHA = {
+    'la-fiesta': dict(cap='100 a 500 pessoas',
+                      tipos=['eventos corporativos', 'festas sociais', 'confraternizações', 'lançamentos', 'casamentos'],
+                      perto=['Itaim Bibi', 'JK Iguatemi', 'Cidade Jardim', 'Iguatemi Faria Lima', 'Shopping Vila Olímpia'],
+                      extras=['som, luz e imagem sem custo adicional', 'equipe técnica, operacional e gastronômica especializada',
+                              'atendimento personalizado em todas as etapas']),
+    'vitrinni-corporate': dict(area='mais de 700 m² de espaço útil', cep='04546-040',
+                               tipos=['eventos corporativos', 'festas privadas', 'confraternizações', 'gravação de clipes',
+                                      'eventos culturais', 'shows', 'casamentos'],
+                               extras=['estrutura adaptável a cada tipo de evento', 'alto padrão']),
+    'illustre-gastropub': dict(tipos=['eventos corporativos', 'eventos sociais', 'casamentos'],
+                               extras=['drinques e cardápio diferenciado', 'decoração', 'atendimento premium']),
+    'espaco-k': dict(tipos=['eventos corporativos', 'eventos sociais', 'casamentos'],
+                     perto=['Avenida Faria Lima, na mesma quadra'],
+                     extras=['ambiente moderno, elegante e seguro', 'sofisticação em cada detalhe']),
+    'notizia': dict(cap='até 80 pessoas',
+                    tipos=['festas de aniversário', 'eventos corporativos', 'confraternizações de fim de ano', 'reuniões de equipe',
+                           'lançamentos de produtos', 'comemorações exclusivas'],
+                    perto=['ruas Tabapuã e João Cachoeira, numa vila do Itaim'],
+                    extras=['projeção multimídia', 'open bar e open food personalizados', 'buffet']),
+    'eventos-perdizes-sp': dict(tipos=['casamentos', 'aniversários', 'bodas', 'treinamentos corporativos', 'team building'],
+                                extras=['pista de dança com palco', 'salão principal', 'área externa com cobertura fixa']),
+}
+for _s in SPACES:
+    _s.update({'cap': None, 'area': None, 'cep': None, 'perto': [], **FICHA[_s['slug']]})
+
+
+PREP = {'Vila Olímpia': 'na', 'Itaim Bibi': 'no', 'Perdizes': 'em'}
+
+
+def junta(itens):
+    itens = list(itens)
+    return itens[0] if len(itens) == 1 else ', '.join(itens[:-1]) + ' e ' + itens[-1]
+
+
+def resumo(s):
+    t = f'O {s["nome"]} é um espaço para eventos {PREP[s["bairro"]]} {s["bairro"]}, São Paulo, na {s["end"]}'
+    if s['cap']:
+        t += f', para {s["cap"]}'
+    if s['area']:
+        t += f', com {s["area"]}'
+    return t + f'. Recebe {junta(s["tipos"])}, com {junta(s["extras"])}.'
+
+
+def faq_espaco(s):
+    n = s['nome']
+    if s['cap']:
+        cap = f'O {n} recebe {s["cap"]}.'
+    else:
+        cap = f'A capacidade do {n} depende do formato do evento. Consulte a equipe pelo WhatsApp {WA_TXT} informando o número de convidados.'
+    if s['area']:
+        cap += f' O espaço tem {s["area"]}.'
+    onde = f'Na {s["end"]}, {s["bairro"]}, São Paulo' + (f', perto de {junta(s["perto"])}' if s['perto'] else '') + '.'
+    return [
+        (f'Quantas pessoas cabem no {n}?', cap),
+        (f'Onde fica o {n}?', onde),
+        (f'Que tipos de evento o {n} recebe?', junta(s['tipos']).capitalize() + '.'),
+        (f'O que está incluso no {n}?', 'Infraestrutura completa de som, iluminação, imagem e mobiliário, além dos serviços de open bar e open food. '
+         f'No {n}: {junta(s["extras"])}.'),
+        (f'Como pedir orçamento ou visitar o {n}?', f'Pelo WhatsApp {WA_TXT}, pelo telefone {TEL_TXT} ou pelo pré atendimento online. '
+         f'O atendimento é {ATENDIMENTO}.'),
+    ]
+
+
+def faq_home():
+    grandes = [s for s in SPACES if s['cap'] and '500' in s['cap']]
+    casam = [s['nome'] for s in SPACES if 'casamentos' in s['tipos']]
+    return [
+        ('Quais espaços para eventos o Grupo Espaços Vila Olímpia tem em São Paulo?',
+         'Seis espaços: ' + junta(f'{s["nome"]} ({s["bairro"]})' for s in SPACES) + '.'),
+        ('Qual espaço é indicado para um evento pequeno, de até 80 pessoas?',
+         'O Notizia, no Itaim Bibi, recebe até 80 pessoas e é indicado para aniversários, reuniões de equipe e confraternizações.'),
+        ('Qual espaço recebe eventos grandes, de até 500 pessoas?',
+         junta(f'O {s["nome"]}, na {s["bairro"]}, recebe {s["cap"]}' for s in grandes) +
+         '. O Vitrinni Corporate, também na Vila Olímpia, tem mais de 700 m² de espaço útil.'),
+        ('Quais espaços fazem casamentos?', junta(casam) + '.'),
+        ('Os espaços têm open bar e open food?',
+         'Sim. Todos os espaços oferecem infraestrutura completa (som, iluminação, imagem e mobiliário) além dos serviços de open bar e open food.'),
+        ('Em quais bairros de São Paulo ficam os espaços?',
+         'Vila Olímpia (La Fiesta, Vitrinni Corporate, Illustre Gastropub e Espaço K), Itaim Bibi (Notizia) e Perdizes (Eventos Perdizes SP), '
+         'perto da Faria Lima, do JK Iguatemi e do Shopping Vila Olímpia.'),
+        ('Como pedir orçamento e agendar visita?',
+         f'Pelo WhatsApp {WA_TXT}, pelo telefone {TEL_TXT}, pelo e-mail {EMAIL} ou pelo pré atendimento online. O atendimento é {ATENDIMENTO}.'),
+    ]
+
+
+def faq_html(itens, titulo='Perguntas frequentes'):
+    q = ''.join(f'<details><summary>{e(p)}</summary><p>{e(r)}</p></details>' for p, r in itens)
+    return f'<h2>{titulo}</h2><div class="faq">{q}</div>'
+
+
+def faq_ld(itens, path):
+    return {'@context': 'https://schema.org', '@type': 'FAQPage', '@id': SITE + path + '#faq',
+            'mainEntity': [{'@type': 'Question', 'name': p, 'acceptedAnswer': {'@type': 'Answer', 'text': r}} for p, r in itens]}
+
+
+def webpage_ld(path, nome, about):
+    return {'@context': 'https://schema.org', '@type': 'WebPage', '@id': SITE + path, 'url': SITE + path, 'name': nome,
+            'inLanguage': 'pt-BR', 'dateModified': HOJE, 'isPartOf': {'@id': SITE + '/#site'}, 'about': {'@id': about}}
+
+
+def ficha_html(s):
+    linhas = [('Endereço', f'{s["end"]}, {s["bairro"]}, São Paulo' + (f', CEP {s["cep"]}' if s['cep'] else '')),
+              ('Capacidade', s['cap'].capitalize() if s['cap'] else 'Sob consulta')]
+    if s['area']:
+        linhas.append(('Área', s['area'].capitalize()))
+    linhas += [('Eventos', junta(s['tipos']).capitalize()),
+               ('Estrutura', 'Som, iluminação, imagem, mobiliário, open bar e open food'),
+               ('Destaques', junta(s['extras']).capitalize())]
+    if s['perto']:
+        linhas.append(('Perto de', junta(s['perto'])))
+    linhas.append(('Atendimento', 'Segunda a sexta, 8h às 19h. Visitas com agendamento'))
+    return '<dl class="ficha">' + ''.join(f'<div><dt>{a}</dt><dd>{e(b)}</dd></div>' for a, b in linhas) + '</dl>'
 
 
 def wa(msg):
@@ -248,9 +370,14 @@ def venue_ld(s):
          'name': s['nome'], 'url': f'{SITE}/listing/{s["slug"]}/', 'description': s['desc'],
          'image': [f'{SITE}/img/{s["id"]}-{n}.jpg' for n in ordem(s)[:4]],
          'address': address(s), 'telephone': TEL, 'containedInPlace': {'@type': 'Place', 'name': s['bairro'] + ', São Paulo'},
-         'parentOrganization': {'@id': ORG_ID}}
+         'parentOrganization': {'@id': ORG_ID}, 'keywords': ', '.join(s['tipos']),
+         'hasMap': 'https://www.google.com/maps/search/?api=1&query=' + quote_plus(f'{s["end"]}, {s["bairro"]}, São Paulo'),
+         'amenityFeature': [{'@type': 'LocationFeatureSpecification', 'name': x, 'value': True}
+                            for x in ['Som', 'Iluminação', 'Imagem', 'Mobiliário', 'Open bar', 'Open food'] + [x.capitalize() for x in s['extras']]]}
     if s.get('cap_max'):
         d['maximumAttendeeCapacity'] = s['cap_max']
+    if s['cep']:
+        d['address']['postalCode'] = s['cep']
     return d
 
 
@@ -331,20 +458,44 @@ def home():
   </div>
 </section>
 
+<section class="compara-sec" id="comparativo">
+  <div class="wrap">
+    <p class="eyebrow">Qual espaço escolher</p>
+    <h2>Os seis espaços lado a lado</h2>
+    <div class="tabela"><table class="compara">
+      <thead><tr><th scope="col">Espaço</th><th scope="col">Bairro</th><th scope="col">Capacidade</th><th scope="col">Ideal para</th></tr></thead>
+      <tbody>{''.join(f'<tr><th scope="row"><a href="listing/{s["slug"]}/">{e(s["nome"])}</a></th><td>{e(s["bairro"])}</td><td>{e((s["cap"] or (s["area"] and "700 m²+") or "Sob consulta").capitalize())}</td><td>{e(junta(s["tipos"][:3]).capitalize())}</td></tr>' for s in SPACES)}</tbody>
+    </table></div>
+  </div>
+</section>
+
 <section class="clientes" id="clientes">
   <div class="wrap">
     <p class="eyebrow">Alguns clientes</p>
     <h2>Alguns clientes que fazem parte do nosso sucesso</h2>
+    <p class="muted">Empresas como {junta(n for _, n in CLIENTES)} já fizeram eventos nos nossos espaços.</p>
   </div>
   <div class="marquee">
     <div class="mq">{''.join(f'<img src="img/cli-{k}.jpg" alt="{e(n)}" width="128" height="64" loading="lazy">' for k, n in CLIENTES)}</div>
   </div>
 </section>
 
+<section class="faq-sec" id="perguntas">
+  <div class="wrap prose">{faq_html(faq_home())}
+    <p class="muted small">Informações atualizadas em {ATUALIZADO}.</p>
+  </div>
+</section>
+
 {contato_bloco(r)}
 '''
     org = {'@context': 'https://schema.org', '@type': 'Organization', '@id': ORG_ID, 'name': 'Grupo Espaços Vila Olímpia',
-           'alternateName': 'Espaços de eventos SP', 'url': SITE + '/', 'logo': SITE + '/img/logo-180.png', 'email': EMAIL,
+           'alternateName': ['Espaços de eventos SP', 'Espaços Vila Olímpia'], 'url': SITE + '/', 'logo': SITE + '/img/logo-180.png', 'email': EMAIL,
+           'description': 'Grupo com mais de 25 anos no mercado de restaurantes, bares, casas noturnas e eventos, que conecta eventos a espaços '
+                          'em São Paulo: seis espaços para eventos corporativos e sociais na Vila Olímpia, no Itaim Bibi e em Perdizes.',
+           'areaServed': {'@type': 'City', 'name': 'São Paulo'},
+           'knowsAbout': ['espaços para eventos', 'eventos corporativos', 'eventos sociais', 'casamentos', 'confraternizações',
+                          'open bar', 'open food', 'som e iluminação para eventos'],
+           'location': [{'@id': f'{SITE}/listing/{s["slug"]}/#espaco'} for s in SPACES],
            'contactPoint': [{'@type': 'ContactPoint', 'telephone': TEL, 'contactType': 'customer service', 'areaServed': 'BR',
                              'availableLanguage': 'Portuguese', 'hoursAvailable': {'@type': 'OpeningHoursSpecification',
                              'dayOfWeek': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], 'opens': '08:00', 'closes': '19:00'}}]}
@@ -355,7 +506,7 @@ def home():
                                  for i, s in enumerate(SPACES, 1)]}
     write('index.html', page('/', 'Espaços de eventos em São Paulo | Vila Olímpia, Itaim Bibi e Perdizes',
                              'Espaços para eventos corporativos e sociais em São Paulo: Vila Olímpia, Itaim Bibi e Perdizes. Som, iluminação, imagem, mobiliário, open bar e open food.',
-                             body, r, schema=[org, site, itens]))
+                             body, r, schema=[org, site, itens, webpage_ld('/', 'Espaços de eventos em São Paulo', ORG_ID), faq_ld(faq_home(), '/')]))
 
 
 def contato_bloco(r, h='h2'):
@@ -409,17 +560,25 @@ def listing(s):
 <section class="esp-body">
   <div class="wrap esp-grid">
     <article class="prose">
+      <p class="resumo"><strong>Em resumo:</strong> {e(resumo(s))}</p>
       <h2>Descrição</h2>
       {texto}
       <p class="muted">Peça seu orçamento! Atendimento de segunda a sexta, das 8h às 19h. Visitas apenas com agendamento.</p>
     </article>
     <aside class="esp-card">
-      <ul class="facts">{''.join(f'<li>{e(f)}</li>' for f in s['facts'])}</ul>
+      <h2 class="ficha-h">Ficha rápida</h2>
+      {ficha_html(s)}
       <a class="addr" href="{maps}" target="_blank" rel="noopener">{PIN}{e(s['end'])}, {e(s['bairro'])}, São Paulo</a>
       <a class="btn btn-wa" href="{wa(f'Olá! Vim pelo site e quero um orçamento no {s["nome"]}.')}" target="_blank" rel="noopener">Orçamento pelo WhatsApp</a>
       <a class="btn btn-line" href="tel:{TEL}">Ligar {TEL_TXT}</a>
       <a class="btn btn-line" href="{r}orcamento/?espaco={s['slug']}">Pré atendimento online</a>
     </aside>
+  </div>
+</section>
+
+<section class="faq-sec">
+  <div class="wrap prose">{faq_html(faq_espaco(s), f'Perguntas frequentes sobre o {e(s["nome"])}')}
+    <p class="muted small">Informações atualizadas em {ATUALIZADO}.</p>
   </div>
 </section>
 
@@ -429,7 +588,8 @@ def listing(s):
 '''
     write(f'listing/{s["slug"]}/index.html',
           page(path, s['title'], s['desc'], body, r, og_img=f'img/{s["id"]}-{s["capa"]}.jpg',
-               schema=[venue_ld(s), crumbs_ld([('Espaços', '/#espacos'), (s['nome'], path)])]))
+               schema=[venue_ld(s), webpage_ld(path, s['title'], f'{SITE}{path}#espaco'), faq_ld(faq_espaco(s), path),
+                       crumbs_ld([('Espaços', '/#espacos'), (s['nome'], path)])]))
 
 
 def simples(path, title, desc, h1, inner, *, eyebrow='', schema=None, extra=''):
@@ -446,6 +606,7 @@ def simples(path, title, desc, h1, inner, *, eyebrow='', schema=None, extra=''):
 def sobre():
     inner = f'''
 <h2>O que fazemos?</h2>
+<p>Somos um grupo com mais de 25 anos no mercado de restaurantes, bares, casas noturnas, restaurantes temáticos e eventos.</p>
 <p>Somos uma empresa que conecta eventos a espaços. Espaços de eventos SP é um site onde você pode encontrar espaços especiais para seu evento reunidos em uma plataforma única.</p>
 <p>Cada um dos espaços disponibilizados possui arquitetura diferenciada e conta com infraestrutura, equipamentos e uma ampla variedade de serviços, proporcionando facilidade e praticidade para os promotores e organizadores de eventos e clientes finais.</p>
 <h2>Estrutura completa</h2>
@@ -652,7 +813,34 @@ def sitemap():
         out.append(f'<url><loc>{SITE}{u}</loc><lastmod>{HOJE}</lastmod><priority>{pr}</priority>{im}</url>')
     write('sitemap.xml', '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n'
           + '\n'.join(out) + '\n</urlset>\n')
-    write('robots.txt', f'User-agent: *\nAllow: /\nDisallow: /tools/\n\nSitemap: {SITE}/sitemap.xml\n')
+    ia = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Perplexity-User', 'ClaudeBot', 'Claude-SearchBot',
+          'Claude-User', 'Google-Extended', 'Applebot-Extended', 'Bingbot', 'DuckAssistBot']
+    write('robots.txt', 'User-agent: *\nAllow: /\nDisallow: /tools/\n\n'
+          '# Buscadores e assistentes com IA: liberados para ler e citar o site\n'
+          + ''.join(f'User-agent: {b}\n' for b in ia) + 'Allow: /\nDisallow: /tools/\n\n'
+          f'Sitemap: {SITE}/sitemap.xml\n')
+
+
+def llms():
+    """Resumo em Markdown para assistentes de IA (padrão llms.txt)."""
+    L = ['# Grupo Espaços Vila Olímpia (Espaços de eventos SP)', '',
+         '> Grupo com mais de 25 anos no mercado de restaurantes, bares, casas noturnas e eventos. Seis espaços para eventos '
+         'corporativos e sociais em São Paulo, na Vila Olímpia, no Itaim Bibi e em Perdizes. Todos com som, iluminação, imagem, '
+         'mobiliário, open bar e open food.', '',
+         f'Contato: WhatsApp {WA_TXT} · telefone {TEL_TXT} · {EMAIL}. Atendimento {ATENDIMENTO}.',
+         f'Informações atualizadas em {ATUALIZADO}.', '', '## Espaços', '']
+    for s in SPACES:
+        L.append(f'- [{s["nome"]}]({SITE}/listing/{s["slug"]}/): {resumo(s)}')
+    L += ['', '## Perguntas frequentes', '']
+    for p_, r_ in faq_home():
+        L += [f'### {p_}', r_, '']
+    L += ['## Páginas', '',
+          f'- [Pré atendimento e orçamento]({SITE}/orcamento/): formulário que envia o pedido pelo WhatsApp',
+          f'- [Contato]({SITE}/contato/)', f'- [Sobre nós]({SITE}/sobre/)',
+          f'- [Serviços de som e iluminação]({SITE}/restaurant/servicos-de-som-e-iluminacao/)',
+          f'- [Política de privacidade]({SITE}/politica-de-privacidade/)', '']
+    write('llms.txt', '\n'.join(L))
+    write(f'{INDEXNOW_KEY}.txt', INDEXNOW_KEY)
 
 
 if __name__ == '__main__':
@@ -660,5 +848,5 @@ if __name__ == '__main__':
     for s in SPACES:
         listing(s)
     sobre(); contato(); orcamento(); politica(); artigo_som(); pagina_404()
-    htaccess(); stubs(); sitemap()
+    htaccess(); stubs(); sitemap(); llms()
     print('ok')

@@ -256,6 +256,34 @@ h2 { font-size: clamp(26px, 3.4vw, 36px); }
 .ft-h { color: #fff; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 4px; }
 .ft-bottom { border-top: 1px solid rgba(255, 255, 255, .08); margin-top: 36px; padding: 18px 0 24px; font-size: 13px; }
 
+/* GEO: resumo, ficha, perguntas, comparativo */
+.resumo { background: var(--bg); border-left: 3px solid var(--pink); border-radius: 0 10px 10px 0; padding: 14px 18px; color: var(--ink) !important; }
+.ficha-h { font-size: 15px; margin-bottom: -4px; }
+.ficha { display: grid; gap: 0; font-size: 13.5px; }
+.ficha div { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.ficha div:first-child { border-top: 0; }
+.ficha dt { color: var(--muted); }
+.ficha dd { color: var(--ink); }
+.faq-sec { padding: 8px 0 56px; }
+#perguntas { padding-top: 64px; background: var(--white); }
+.faq { display: grid; gap: 10px; }
+.faq details { background: #fff; border-radius: 12px; box-shadow: var(--shadow); padding: 0 18px; }
+.faq summary { cursor: pointer; list-style: none; padding: 16px 28px 16px 0; font-weight: 500; position: relative; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: '+'; position: absolute; right: 0; top: 12px; font-size: 22px; color: var(--pink); transition: transform .2s; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq details p { padding-bottom: 16px; margin: 0; }
+.compara-sec { padding: 72px 0 8px; }
+.compara-sec h2 { margin-bottom: 24px; }
+.tabela { overflow-x: auto; border-radius: var(--r); box-shadow: var(--shadow); }
+.compara { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; min-width: 620px; }
+.compara th, .compara td { text-align: left; padding: 14px 16px; border-top: 1px solid var(--line); vertical-align: top; }
+.compara thead th { border-top: 0; background: var(--navy); color: #fff; font-weight: 500; font-size: 13px; }
+.compara tbody th { font-weight: 600; white-space: nowrap; }
+.compara tbody th a:hover { color: var(--pink); }
+.compara td { color: #44444f; }
+.clientes .muted { max-width: 640px; margin: -20px auto 32px; font-size: 14px; }
+
 @media (max-width: 1080px) {
   .track-cards { grid-auto-columns: calc((min(1200px, 100% - 40px) - var(--gap) * 2) / 3); }
 }
