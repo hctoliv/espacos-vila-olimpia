@@ -1,0 +1,63 @@
+# Grupo Espaços Vila Olímpia: site estático que substitui o WordPress.
+# Gerado por tools/gerar.py. Não remover a pasta wp-content/uploads do servidor:
+# as fotos antigas podem estar indexadas no Google Imagens.
+
+Options -MultiViews -Indexes
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+ErrorDocument 410 /404.html
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# Domínio único: https, sem www
+RewriteCond %{HTTPS} off [OR]
+RewriteCond %{HTTP_HOST} ^www\. [NC]
+RewriteRule ^ https://espacosvilaolimpia.com.br%{REQUEST_URI} [R=301,L,NE]
+
+# Links curtos do WordPress (?p=123, ?page_id=123) e feeds
+RewriteCond %{QUERY_STRING} (^|&)(p|page_id)=\d+ [NC]
+RewriteRule ^$ /? [R=301,L]
+RewriteRule ^(.*/)?feed/?$ /? [R=301,L]
+RewriteRule ^comments/feed/?$ /? [R=301,L]
+
+# Sitemaps antigos do WordPress apontam para o novo
+RewriteRule ^wp-sitemap(-[a-z0-9_-]+)?\.xml$ /sitemap.xml [R=301,L]
+RewriteRule ^sitemap_index\.xml$ /sitemap.xml [R=301,L]
+
+# Páginas antigas com a mesma intenção (301)
+RewriteRule ^home\-modern/?$ /? [R=301,L]
+RewriteRule ^home\-static/?$ /? [R=301,L]
+RewriteRule ^home\-static\-2/?$ /? [R=301,L]
+RewriteRule ^dashboard/?$ /? [R=301,L]
+RewriteRule ^listing\-plan/top/?$ /? [R=301,L]
+RewriteRule ^listing/?$ /? [R=301,L]
+RewriteRule ^blog/?$ /? [R=301,L]
+RewriteRule ^search\-v2/?$ /? [R=301,L]
+RewriteRule ^search\-v2\-2/?$ /? [R=301,L]
+RewriteRule ^search\-v2\-3/?$ /? [R=301,L]
+RewriteRule ^taxonomy\-template/?$ /? [R=301,L]
+RewriteRule ^taxonomy\-template\-2/?$ /? [R=301,L]
+RewriteRule ^about\-us\-2/?$ /sobre/? [R=301,L]
+RewriteRule ^contact\-us\-2/?$ /contato/? [R=301,L]
+
+# Restos do tema WordPress sem relação com o negócio (410 Gone)
+RewriteRule ^(pagina\-exemplo|shop|cart|checkout|checkout\-2|my\-account|my\-account\-2|wishlist|add\-listing|add\-listing\-plan|add\-listing\-plan\-2|login|login\-2|term\-of\-services|become\-an\-author|cancel|confirm\-account|user\-plan|package|planos|store\-listing|my\-orders|cadastro)/?$ - [G,L]
+RewriteRule ^restaurant/(barshu|din\-tai\-fung|hakkasan|imperial\-treasure|the\-little\-lamb|my\-neighbours\-the\-dumplings|the\-barbary|the\-bright|padella|tapas\-brindisa\-london\-bridge|el\-pastor|hoppers|tandoor\-chop\-house|the\-counter\-at\-sabor|smoking\-goat)/?$ - [G,L]
+RewriteRule ^(listing_location|listing_cat|listing_tag|listing_plan)/ - [G,L]
+RewriteRule ^wp-(login\.php|admin|json)(/.*)?$ - [G,L]
+</IfModule>
+
+<IfModule mod_deflate.c>
+AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml application/xml text/xml
+</IfModule>
+
+<IfModule mod_expires.c>
+ExpiresActive On
+ExpiresByType text/html "access plus 0 seconds"
+ExpiresByType text/css "access plus 1 month"
+ExpiresByType application/javascript "access plus 1 month"
+ExpiresByType image/jpeg "access plus 6 months"
+ExpiresByType image/webp "access plus 6 months"
+ExpiresByType image/png "access plus 6 months"
+</IfModule>
