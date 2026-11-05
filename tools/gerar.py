@@ -413,7 +413,7 @@ ARROWS = '''<div class="arrows">
 
 
 def carrossel_cards(r, titulo, lista, *, h='h2', claro=False, eager=False, auto=True):
-    cards = ''.join(card(s, r, eager and i < 3) for i, s in enumerate(lista))
+    cards = ''.join(card(s, r, eager and i < 4) for i, s in enumerate(lista))
     return f'''<div class="carousel{' on-light' if claro else ''}"{' data-auto' if auto else ''}>
     <div class="wrap row-head"><{h}>{titulo}</{h}>{ARROWS}</div>
     <div class="track track-cards" tabindex="0" aria-label="Carrossel de espaços">{cards}
