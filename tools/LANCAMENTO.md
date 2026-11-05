@@ -94,6 +94,41 @@ dig +short MX espacosvilaolimpia.com.br; dig +short mail.espacosvilaolimpia.com.
 Esperado: 200 em tudo da primeira linha; `/home-static/` com canonical para `/`; `www`/`http` com 301 para
 `https://espacosvilaolimpia.com.br/`; MX e `mail` ainda em 162.241.203.20.
 
+## GEO (buscadores com IA: ChatGPT, Perplexity, AI Overviews do Google, Copilot)
+
+O que já está no site (gerado por `tools/gerar.py`, sem nenhum fato inventado):
+- **Resumo no topo de cada espaço** ("Em resumo: …") em uma frase autossuficiente, fácil de citar.
+- **Ficha rápida** por espaço: endereço, capacidade (só onde o original informa; nos outros "Sob consulta"), eventos, estrutura, destaques, atendimento.
+- **Perguntas frequentes** em cada espaço (5) e na home (7), com schema `FAQPage`.
+- **Comparativo** na home: os 6 espaços lado a lado (bairro, capacidade, ideal para).
+- **Clientes em texto** (não só logos): Amazon, Santander, Bradesco, Honda, Odebrecht, Camargo Corrêa, OLX e Imovelweb.
+- **Entidade**: `Organization` com descrição (25 anos de mercado), `areaServed`, `knowsAbout` e os 6 `EventVenue` ligados;
+  cada espaço com `amenityFeature`, `keywords`, `hasMap`, `WebPage.dateModified`.
+- **`/llms.txt`**: resumo do grupo, dos espaços e das perguntas, em Markdown, para assistentes de IA.
+- **`robots.txt`** liberando explicitamente GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, Claude-SearchBot,
+  Google-Extended, Applebot-Extended, Bingbot e DuckAssistBot. Se o cliente não quiser que o conteúdo treine modelos,
+  tirar só GPTBot, ClaudeBot, Google-Extended e Applebot-Extended (os de busca continuam e a citação não é afetada).
+- **IndexNow**: chave `357eaf7eeca013f0a6e54743cb55866e` (arquivo `/357eaf7eeca013f0a6e54743cb55866e.txt`). Avisa Bing/Copilot e Yandex na hora; o ChatGPT busca muito pelo índice do Bing.
+
+Depois do lançamento:
+1. **Bing Webmaster Tools**: importar o site do Search Console e enviar o `/sitemap.xml`.
+2. Avisar o IndexNow (repetir sempre que mudar conteúdo):
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://api.indexnow.org/indexnow -H "Content-Type: application/json" -d '{"host":"espacosvilaolimpia.com.br","key":"357eaf7eeca013f0a6e54743cb55866e","urlList":["https://espacosvilaolimpia.com.br/","https://espacosvilaolimpia.com.br/listing/la-fiesta/","https://espacosvilaolimpia.com.br/listing/vitrinni-corporate/","https://espacosvilaolimpia.com.br/listing/illustre-gastropub/","https://espacosvilaolimpia.com.br/listing/espaco-k/","https://espacosvilaolimpia.com.br/listing/notizia/","https://espacosvilaolimpia.com.br/listing/eventos-perdizes-sp/","https://espacosvilaolimpia.com.br/llms.txt"]}'
+   ```
+   (200 ou 202 = recebido.)
+3. **Fora do site, onde as IAs mais buscam confirmação** (precisa do cliente):
+   - Perfil da Empresa no Google para cada espaço, com o mesmo nome, endereço e telefone do site.
+   - Corrigir os diretórios antigos: o BaresSP lista "Vitrinni Lounge" na Rua Quatá, 1016, e La Fiesta sem dados novos.
+   - Instagram do grupo/espaços: quando tiver o @, colocar em `sameAs` no schema (`tools/gerar.py`, objeto `org`).
+   - Avaliações no Google: a IA cita muito "bem avaliado" a partir delas.
+4. **Medir**: uma vez por mês, perguntar no ChatGPT, Perplexity e Google (AI Overview) coisas como
+   "espaço para eventos na Vila Olímpia para 300 pessoas", "espaço para confraternização no Itaim Bibi até 80 pessoas",
+   "espaço para casamento em Perdizes" e anotar se o site ou o espaço aparece e é citado. No GA4 (quando instalado),
+   acompanhar visitas de origem chatgpt.com, perplexity.ai, copilot.microsoft.com e gemini.google.com.
+
+Para manter: a data "Informações atualizadas em" (`ATUALIZADO` em `tools/gerar.py`) deve mudar quando os dados mudarem.
+
 ## Monitoramento (30 dias)
 
 | Quando | O que olhar | Sinal de alerta |
