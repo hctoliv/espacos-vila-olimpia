@@ -543,11 +543,15 @@ REDIRECT_301 = {
     'listing': '/', 'blog': '/', 'search-v2': '/', 'search-v2-2': '/', 'search-v2-3': '/',
     'taxonomy-template': '/', 'taxonomy-template-2': '/',
     'about-us-2': '/sobre/', 'contact-us-2': '/contato/',
+    'feed': '/', 'comments/feed': '/',
 }
 GONE_410 = ['pagina-exemplo', 'shop', 'cart', 'checkout', 'checkout-2', 'my-account', 'my-account-2', 'wishlist',
             'add-listing', 'add-listing-plan', 'add-listing-plan-2', 'login', 'login-2', 'term-of-services',
             'become-an-author', 'cancel', 'confirm-account', 'user-plan', 'package', 'planos', 'store-listing',
             'my-orders', 'cadastro']
+WP_SITEMAPS = ['wp-sitemap.xml', 'wp-sitemap-posts-page-1.xml', 'wp-sitemap-posts-listing-1.xml', 'wp-sitemap-posts-restaurant-1.xml',
+               'wp-sitemap-posts-listing_plan-1.xml', 'wp-sitemap-taxonomies-listing_location-1.xml',
+               'wp-sitemap-taxonomies-listing_cat-1.xml', 'wp-sitemap-taxonomies-listing_tag-1.xml']
 RESTAURANTES_410 = ['barshu', 'din-tai-fung', 'hakkasan', 'imperial-treasure', 'the-little-lamb', 'my-neighbours-the-dumplings',
                     'the-barbary', 'the-bright', 'padella', 'tapas-brindisa-london-bridge', 'el-pastor', 'hoppers',
                     'tandoor-chop-house', 'the-counter-at-sabor', 'smoking-goat']
@@ -559,8 +563,9 @@ def htaccess():
     gone = '|'.join(q(x) for x in GONE_410)
     rest = '|'.join(q(x) for x in RESTAURANTES_410)
     write('.htaccess', f'''# Grupo Espaços Vila Olímpia: site estático que substitui o WordPress.
-# Gerado por tools/gerar.py. Não remover a pasta wp-content/uploads do servidor:
-# as fotos antigas podem estar indexadas no Google Imagens.
+# Gerado por tools/gerar.py. Usado só se o site for para um Apache; no GitHub Pages
+# este arquivo é ignorado e os redirecionamentos vêm das páginas com meta refresh.
+# wp-content/uploads tem cópia das fotos antigas do WordPress (podem estar no Google Imagens).
 
 Options -MultiViews -Indexes
 DirectoryIndex index.html
@@ -626,8 +631,9 @@ def stubs():
 <meta http-equiv="refresh" content="0; url={'../' * (k.count('/') + 1)}{v.lstrip('/')}">
 </head><body><p><a href="{dest}">Continuar para {dest}</a></p></body></html>
 ''')
-    # GitHub Pages não redireciona .xml: o wp-sitemap.xml vira um índice que aponta para o novo
-    write('wp-sitemap.xml', f'''<?xml version="1.0" encoding="UTF-8"?>
+    # GitHub Pages não redireciona .xml: os sitemaps do WordPress viram índices que apontam para o novo
+    for nome in WP_SITEMAPS:
+        write(nome, f'''<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><sitemap><loc>{SITE}/sitemap.xml</loc></sitemap></sitemapindex>
 ''')
 

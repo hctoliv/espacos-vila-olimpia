@@ -22,42 +22,77 @@ A estratégia foi preservar tudo que pode estar indexado e trazer tráfego, e el
 | `/orcamento/` | formulário de pré atendimento | mesma URL, mesmo formulário (envia pelo WhatsApp) | 200 |
 | `/politica-de-privacidade/` | texto legal | mesma URL, mesmo texto | 200 |
 | `/restaurant/servicos-de-som-e-iluminacao/` | artigo de 2023 | mesma URL, mesmo artigo + link para os espaços | 200 |
-| `/home-static/`, `/home-static-2/`, `/home-modern/`, `/dashboard/`, `/listing-plan/top/`, `/listing/`, `/blog/`, `/search-v2*/`, `/taxonomy-template*/` | duplicatas da home / buscas com erro 500 | 301 → `/` | 301 |
-| `/about-us-2/` · `/contact-us-2/` | páginas demo | 301 → `/sobre/` · `/contato/` | 301 |
-| `/wp-sitemap.xml` e sub-sitemaps | sitemap WP com 72 URLs (10 com erro 500) | 301 → `/sitemap.xml` (12 páginas reais + 50 imagens) | 301 |
-| `?p=`, `?page_id=`, `/feed/` | links curtos e feeds WP | 301 → `/` | 301 |
-| `/cart/`, `/shop/`, `/login/`… (23 páginas) e 15 `/restaurant/` de Londres | lixo do tema | 410 Gone | 410 |
-| `http://` e `www.` | http não redirecionava (conteúdo duplicado) | 301 → `https://espacosvilaolimpia.com.br` | 301 |
+| `/home-static/`, `/home-static-2/`, `/home-modern/`, `/dashboard/`, `/listing-plan/top/`, `/listing/`, `/blog/`, `/search-v2*/`, `/taxonomy-template*/` | duplicatas da home / buscas com erro 500 | → `/` (meta refresh + canonical; 301 no Apache) | ok |
+| `/about-us-2/` · `/contact-us-2/` | páginas demo | → `/sobre/` · `/contato/` (meta refresh + canonical) | ok |
+| `/wp-sitemap.xml` e sub-sitemaps | sitemap WP com 72 URLs (10 com erro 500) | índice apontando para `/sitemap.xml` (12 páginas reais + 50 imagens) | ok |
+| `/feed/`, `?page_id=` | feeds e links curtos WP | `/feed/` → `/`; `?page_id=` cai na home (canonical `/`) | ok |
+| `/cart/`, `/shop/`, `/login/`… (23 páginas) e 15 `/restaurant/` de Londres | lixo do tema | 404 no GitHub Pages (410 se for para Apache) | 404 |
+| `http://` e `www.` | http não redirecionava (conteúdo duplicado) | 301 → `https://espacosvilaolimpia.com.br` (feito pelo GitHub) | 301 |
 
 Outras melhorias: canonical absoluto em todas as páginas, Open Graph completo, rodapé com links para os 6 espaços
 (o antigo apontava para 4 buscas com erro 500), fotos dos cards em WebP de 800px (≈50 KB em vez de ≈250 KB),
-página 404 útil, gzip e cache no `.htaccess`.
+página 404 útil, cópia das 289 fotos antigas em `wp-content/uploads/` (mesmas URLs).
 
 Cobertura do texto original nas páginas dos espaços: 94 a 100% das palavras.
 
-## Antes de apontar o domínio (obrigatório)
+## Hospedagem escolhida: GitHub Pages (repo hctoliv/espacos-vila-olimpia, branch main)
 
-1. **Backup completo do WordPress** (arquivos + banco) pelo painel da hospedagem. É o rollback.
-2. **Hospedagem**: subir no mesmo Apache (recomendado). O `.htaccess` faz os 301/410 de verdade.
-   No GitHub Pages não existe 301: os redirecionamentos viram meta refresh (pasta de cada URL antiga) e os 410 viram 404.
-3. Na raiz do servidor: remover os arquivos do WordPress e **manter `wp-content/uploads/`** (fotos antigas podem estar no Google Imagens).
-   Não precisa subir `tools/` nem `.git/` (e o `.htaccess` bloqueia os dois).
-4. Confirmar com o cliente: número da Rua Quatá (o site antigo diz "1"; o BaresSP diz 1016 para o Vitrinni Lounge),
-   número da Rua Diana (Perdizes) e da Rua Professor Atílio Innocenti (Espaço K). Corrigir em `tools/gerar.py` e rodar de novo.
-5. Pedir acesso ao **Search Console** (ou criar a propriedade de domínio) e ao GA4, se existir. Hoje o site não tem nenhuma tag.
+Diferenças em relação a um Apache, já tratadas:
+- GitHub Pages não faz 301. As URLs antigas com destino (home-static, about-us-2, feed…) têm uma página com
+  meta refresh imediato + canonical, que o Google trata como redirecionamento permanente.
+- Sem 410: o lixo do tema responde 404 (o Google remove do índice do mesmo jeito, só um pouco mais devagar).
+- Os sitemaps do WordPress (`wp-sitemap*.xml`) viraram índices que apontam para o `/sitemap.xml`.
+- As 289 fotos antigas do WordPress (62 MB) estão copiadas em `wp-content/uploads/` nos mesmos caminhos,
+  então nenhuma URL de imagem indexada quebra.
+- `www` → raiz e `http` → `https` o próprio GitHub faz, depois do passo 4.
+- O `.htaccess` fica no repo só para o caso de um dia o site ir para um Apache; o GitHub ignora.
 
-## Logo depois do lançamento
+## ⚠️ O e-mail roda no servidor atual
+
+`eventos@espacosvilaolimpia.com.br` usa MX → `mail.espacosvilaolimpia.com.br` → 162.241.203.20 (o mesmo servidor do WordPress,
+DNS em ns1/ns2.guiadorossi.com.br). Por isso:
+- **Mudar só** o registro A da raiz e o `www`. **Não mexer** em MX, `mail`, TXT (SPF) nem em outros subdomínios.
+- **Não cancelar a hospedagem atual**, senão o e-mail para.
+
+## Passo a passo do lançamento
+
+1. **Backup completo do WordPress** (arquivos + banco) no painel da hospedagem. É o rollback.
+2. Confirmar com o cliente os números da Rua Quatá (site antigo "1", BaresSP 1016 para o Vitrinni Lounge), da Rua Diana
+   (Perdizes) e da Rua Professor Atílio Innocenti (Espaço K). Corrigir em `tools/gerar.py`, rodar e publicar.
+3. **Um dia antes**: no DNS (cPanel › Zone Editor), baixar o TTL dos registros `espacosvilaolimpia.com.br` (A) e `www` de 14400 para 300.
+   Opcional, recomendado: verificar o domínio no GitHub (Settings › Pages › Verified domains), que pede um TXT `_github-pages-challenge-hctoliv`.
+4. **No dia**, no DNS:
+   | Nome | Tipo | Valor |
+   |---|---|---|
+   | `espacosvilaolimpia.com.br` | A | 185.199.108.153, 185.199.109.153, 185.199.110.153, 185.199.111.153 (4 registros, apagar o 162.241.203.20) |
+   | `espacosvilaolimpia.com.br` | AAAA | 2606:50c0:8000::153, 2606:50c0:8001::153, 2606:50c0:8002::153, 2606:50c0:8003::153 |
+   | `www` | CNAME | `hctoliv.github.io` |
+   | `mail`, MX, TXT, demais | — | **não mexer** |
+5. Logo depois, apontar o Pages para o domínio (cria o arquivo CNAME no repo):
+   ```bash
+   gh api -X PUT repos/hctoliv/espacos-vila-olimpia/pages -f cname=espacosvilaolimpia.com.br
+   ```
+   A partir daqui `hctoliv.github.io/espacos-vila-olimpia` redireciona para o domínio.
+6. Esperar o certificado (minutos a algumas horas; em Settings › Pages aparece "certificate active") e então marcar **Enforce HTTPS**:
+   ```bash
+   gh api -X PUT repos/hctoliv/espacos-vila-olimpia/pages -F https_enforced=true
+   ```
+7. Conferir (abaixo) e mandar um e-mail de teste para eventos@ para confirmar que continua chegando.
+8. Search Console: enviar `/sitemap.xml`, remover o `wp-sitemap.xml`, pedir indexação da home e das 6 páginas `/listing/`,
+   testar 2 páginas no Teste de pesquisa aprimorada (schema).
+
+## Conferência depois do lançamento
 
 ```bash
-for u in / /listing/la-fiesta/ /listing/notizia/ /sobre/ /orcamento/ /home-static/ /cart/ /wp-sitemap.xml; do
-  printf "%-28s " $u; curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" https://espacosvilaolimpia.com.br$u; done
-curl -sI http://www.espacosvilaolimpia.com.br/ | grep -i location
+for u in / /listing/la-fiesta/ /listing/notizia/ /sobre/ /orcamento/ /sitemap.xml /wp-content/uploads/2021/09/16-1024x774-1.jpeg; do
+  printf "%-60s " $u; curl -s -o /dev/null -w "%{http_code}\n" https://espacosvilaolimpia.com.br$u; done
+curl -s https://espacosvilaolimpia.com.br/home-static/ | grep -o 'canonical" href="[^"]*'
+curl -sI http://www.espacosvilaolimpia.com.br/ | grep -iE "^HTTP|location"
+dig +short MX espacosvilaolimpia.com.br; dig +short mail.espacosvilaolimpia.com.br
 ```
 
-Esperado: 200 nas páginas reais, 301 nas antigas, 410 em `/cart/`, 301 `http`/`www` → `https://espacosvilaolimpia.com.br/`.
-
-No Search Console: enviar `/sitemap.xml`, remover o `wp-sitemap.xml`, pedir indexação da home e das 6 páginas `/listing/`,
-e testar 2 páginas no Teste de pesquisa aprimorada (schema).
+Esperado: 200 em tudo da primeira linha; `/home-static/` com canonical para `/`; `www`/`http` com 301 para
+`https://espacosvilaolimpia.com.br/`; MX e `mail` ainda em 162.241.203.20.
 
 ## Monitoramento (30 dias)
 
@@ -73,7 +108,8 @@ Comparar sempre com o mesmo período anterior (sazonalidade de fim de ano pesa m
 
 ## Rollback
 
-O WordPress fica intacto até a troca. Se algo der errado: restaurar o backup do passo 1 (ou voltar o DNS) e investigar com calma.
+O WordPress continua instalado no servidor. Se algo der errado: voltar o registro A da raiz para 162.241.203.20 e o `www` para CNAME `espacosvilaolimpia.com.br`
+(com TTL 300, volta em minutos) e tirar o domínio do Pages com `gh api -X PUT repos/hctoliv/espacos-vila-olimpia/pages -f cname=`.
 
 ## Como editar
 
